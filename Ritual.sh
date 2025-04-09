@@ -28,14 +28,14 @@ display_header() {
 
 # Exibindo o banner e outros textos
 display_header
-echo -e "${BLUE}=====================================================================================${NC}"
-echo -e "${GREEN}🔗 Curtiu o Bot? Me siga lá no Twitter: https://x.com/0x_renan ${NC}"
-echo -e "${BLUE}=====================================================================================${NC}"
+printf "${BLUE}=====================================================================================${NC}\n"
+printf "${GREEN}🔗 Curtiu o Bot? Me siga lá no Twitter: https://x.com/0x_renan ${NC}\n"
+printf "${BLUE}=====================================================================================${NC}\n"
 
 # Check if script is run as root
 if [ "$(id -u)" != "0" ]; then
-    echo -e "${RED}This script requires root privileges.${NC}"
-    echo -e "${YELLOW}Please try running with 'sudo -i' to switch to root user, then run this script again.${NC}"
+    printf "${RED}This script requires root privileges.${NC}\n"
+    printf "${YELLOW}Please try running with 'sudo -i' to switch to root user, then run this script again.${NC}\n"
     exit 1
 fi
 
@@ -46,14 +46,14 @@ SCRIPT_PATH="$HOME/Ritual.sh"
 function main_menu() {
     while true; do
         display_header
-        echo -e "${BLUE}To exit the script, press Ctrl+C${NC}"
-        echo -e "${YELLOW}Please select an operation:${NC}"
-        echo -e "1) ${GREEN}Install Ritual Node${NC}"
-        echo -e "2) ${CYAN}View Ritual Node logs${NC}"
-        echo -e "3) ${RED}Remove Ritual Node${NC}"
-        echo -e "4) ${MAGENTA}Exit script${NC}"
+        printf "${BLUE}To exit the script, press Ctrl+C${NC}\n"
+        printf "${YELLOW}Please select an operation:${NC}\n"
+        printf "1) ${GREEN}Install Ritual Node${NC}\n"
+        printf "2) ${CYAN}View Ritual Node logs${NC}\n"
+        printf "3) ${RED}Remove Ritual Node${NC}\n"
+        printf "4) ${MAGENTA}Exit script${NC}\n"
         
-        read -p "$(echo -e "${BLUE}Enter your choice: ${NC}")" choice
+        read -p "$(printf "${BLUE}Enter your choice: ${NC}")" choice
 
         case $choice in
             1) 
@@ -66,15 +66,15 @@ function main_menu() {
                 remove_ritual_node
                 ;;
             4)
-                echo -e "${GREEN}Exiting script!${NC}"
+                printf "${GREEN}Exiting script!${NC}\n"
                 exit 0
                 ;;
             *)
-                echo -e "${RED}Invalid option, please choose again.${NC}"
+                printf "${RED}Invalid option, please choose again.${NC}\n"
                 ;;
         esac
 
-        echo -e "${YELLOW}Press any key to continue...${NC}"
+        printf "${YELLOW}Press any key to continue...${NC}\n"
         read -n 1 -s
     done
 }
@@ -83,21 +83,21 @@ function main_menu() {
 function install_ritual_node() {
     display_header
     # System update and essential package installation (including Python and pip)
-    echo -e "${YELLOW}System update and installing necessary packages...${NC}"
+    printf "${YELLOW}System update and installing necessary packages...${NC}\n"
     sudo apt update && sudo apt upgrade -y
     sudo apt -qy install curl git jq lz4 build-essential screen python3 python3-pip
 
     # Install or upgrade Python packages
-    echo -e "${CYAN}[Info] Upgrading pip3 and installing infernet-cli / infernet-client${NC}"
+    printf "${CYAN}[Info] Upgrading pip3 and installing infernet-cli / infernet-client${NC}\n"
     pip3 install --upgrade pip
     pip3 install infernet-cli infernet-client
 
     # Check if Docker is installed
-    echo -e "${YELLOW}Checking Docker installation...${NC}"
+    printf "${YELLOW}Checking Docker installation...${NC}\n"
     if command -v docker &> /dev/null; then
-        echo -e "${GREEN} - Docker is already installed, skipping.${NC}"
+        printf "${GREEN} - Docker is already installed, skipping.${NC}\n"
     else
-        echo -e "${YELLOW} - Docker not found, installing...${NC}"
+        printf "${YELLOW} - Docker not found, installing...${NC}\n"
         
         # Update apt package index
         sudo apt update
@@ -122,30 +122,30 @@ function install_ritual_node() {
         sudo systemctl start docker
         
         # Verify Docker version
-        echo -e "${GREEN}Docker installation complete, current version:${NC}"
+        printf "${GREEN}Docker installation complete, current version:${NC}\n"
         docker --version
     fi
 
     # Check Docker Compose installation
-    echo -e "${YELLOW}Checking Docker Compose installation...${NC}"
+    printf "${YELLOW}Checking Docker Compose installation...${NC}\n"
     if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-        echo -e "${YELLOW} - Docker Compose not found, installing...${NC}"
+        printf "${YELLOW} - Docker Compose not found, installing...${NC}\n"
         sudo curl -L "https://github.com/docker/compose/releases/download/v2.29.2/docker-compose-$(uname -s)-$(uname -m)" \
              -o /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
     else
-        echo -e "${GREEN} - Docker Compose already installed, skipping.${NC}"
+        printf "${GREEN} - Docker Compose already installed, skipping.${NC}\n"
     fi
 
-    echo -e "${CYAN}[Verify] Docker Compose version:${NC}"
+    printf "${CYAN}[Verify] Docker Compose version:${NC}\n"
     docker compose version || docker-compose version
 
     # Install Foundry and set up environment variables
     echo
-    echo -e "${YELLOW}Installing Foundry...${NC}"
+    printf "${YELLOW}Installing Foundry...${NC}\n"
     # Stop anvil if running
     if pgrep anvil &>/dev/null; then
-        echo -e "${YELLOW}[Warning] anvil is running, stopping to update Foundry.${NC}"
+        printf "${YELLOW}[Warning] anvil is running, stopping to update Foundry.${NC}\n"
         pkill anvil
         sleep 2
     fi
@@ -163,48 +163,49 @@ function install_ritual_node() {
         export PATH="$HOME/.foundry/bin:$PATH"
     fi
 
-    echo -e "${CYAN}[Verify] forge version:${NC}"
+    printf "${CYAN}[Verify] forge version:${NC}\n"
     forge --version || {
-        echo -e "${RED}[Error] Could not find forge command, ~/.foundry/bin may not be in PATH or installation failed.${NC}"
+        printf "${RED}[Error] Could not find forge command, ~/.foundry/bin may not be in PATH or installation failed.${NC}\n"
         exit 1
     }
 
     # Remove /usr/bin/forge to prevent ZOE error
     if [ -f /usr/bin/forge ]; then
-        echo -e "${CYAN}[Info] Removing /usr/bin/forge...${NC}"
+        printf "${CYAN}[Info] Removing /usr/bin/forge...${NC}\n"
         sudo rm /usr/bin/forge
     fi
 
-    echo -e "${GREEN}[Info] Foundry installation and environment setup complete.${NC}"
+    printf "${GREEN}[Info] Foundry installation and environment setup complete.${NC}\n"
     cd ~ || exit 1
 
     # Clone infernet-container-starter
     # Check if directory exists and remove if it does
     if [ -d "infernet-container-starter" ]; then
-        echo -e "${YELLOW}Directory infernet-container-starter exists, removing...${NC}"
+        printf "${YELLOW}Directory infernet-container-starter exists, removing...${NC}\n"
         rm -rf "infernet-container-starter"
-        echo -e "${GREEN}Directory infernet-container-starter removed.${NC}"
+        printf "${GREEN}Directory infernet-container-starter removed.${NC}\n"
     fi
 
     # Clone repository
-    echo -e "${YELLOW}Cloning infernet-container-starter...${NC}"
+    printf "${YELLOW}Cloning infernet-container-starter...${NC}\n"
     git clone https://github.com/ritual-net/infernet-container-starter
 
     # Enter directory
-    cd infernet-container-starter || { echo -e "${RED}[Error] Failed to enter directory${NC}"; exit 1; }
+    cd infernet-container-starter || { printf "${RED}[Error] Failed to enter directory${NC}"; exit 1; }
 
     # Pull Docker image
-    echo -e "${YELLOW}Pulling Docker image...${NC}"
+    printf "${YELLOW}Pulling Docker image...${NC}\n"
     docker pull ritualnetwork/hello-world-infernet:latest
 
     # Initial deployment in screen session (make deploy-container)
-    echo -e "${YELLOW}Checking for existing screen session 'ritual'...${NC}"
+    printf "${YELLOW}Checking for existing screen session 'ritual'...${NC}\n"
 
     # Check if 'ritual' session exists
     if screen -list | grep -q "ritual"; then
-        echo -e "${YELLOW}[Info] Found existing ritual session, terminating...${NC}"
+        printf "${YELLOW}[Info] Found existing ritual session, terminating...${NC}\n"
         screen -S ritual -X quit
         sleep 1
     fi
 
-    echo -e "${YELLOW}Starting container deployment in screen session 'ritual'...${NC}"
+    printf "${YELLOW}Starting container deployment in screen session 'ritual'...${NC}\n"
+}
