@@ -69,8 +69,29 @@ main_menu() {
 install_ritual_node() {
     display_header
     echo -e "${YELLOW}Instalando o Node Ritual...${NC}"
-    # Aqui você colocaria os comandos de instalação do node
-    echo -e "${GREEN}Node Ritual instalado com sucesso!${NC}"
+
+    # Aqui você colocaria os comandos reais para instalar o Node Ritual
+    # Exemplo básico de instalação de Node (ajuste conforme o necessário para o seu caso):
+    
+    echo -e "${CYAN}Baixando dependências...${NC}"
+    # Suponhamos que o Node.js e dependências necessárias sejam baixadas:
+    sudo apt update
+    sudo apt install -y nodejs npm
+
+    echo -e "${CYAN}Instalando Node Ritual...${NC}"
+    # Simulação de instalação do Node Ritual
+    # Exemplo: git clone ou download de arquivos específicos
+    git clone https://github.com/exemplo/node-ritual.git /opt/node-ritual
+    cd /opt/node-ritual
+    npm install
+
+    # Verificando se a instalação foi bem-sucedida
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Node Ritual instalado com sucesso!${NC}"
+    else
+        echo -e "${RED}Erro na instalação do Node Ritual.${NC}"
+    fi
+    
     main_menu
 }
 
@@ -78,8 +99,11 @@ install_ritual_node() {
 view_logs() {
     display_header
     echo -e "${YELLOW}Exibindo logs do Node Ritual...${NC}"
-    # Aqui você colocaria o comando para visualizar os logs
-    echo -e "${CYAN}Logs sendo exibidos...${NC}"
+
+    # Aqui você pode adicionar o comando para visualizar os logs do Node Ritual
+    # Por exemplo:
+    tail -n 50 /var/log/node-ritual.log
+
     main_menu
 }
 
@@ -87,8 +111,17 @@ view_logs() {
 remove_ritual_node() {
     display_header
     echo -e "${RED}Removendo o Node Ritual...${NC}"
-    # Aqui você colocaria os comandos para remover o node
-    echo -e "${GREEN}Node Ritual removido com sucesso!${NC}"
+
+    # Comando para remover a instalação do Node Ritual
+    sudo rm -rf /opt/node-ritual
+
+    # Verificando se foi removido
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Node Ritual removido com sucesso!${NC}"
+    else
+        echo -e "${RED}Erro na remoção do Node Ritual.${NC}"
+    fi
+    
     main_menu
 }
 
