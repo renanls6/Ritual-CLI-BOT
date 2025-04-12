@@ -205,13 +205,19 @@ function install_ritual_node() {
     # Start new screen session for deployment
     screen -S ritual -dm bash -c 'project=hello-world make deploy-container; exec bash'
 
-    echo -e "${CYAN}[Info] Deployment running in background screen session (ritual).${NC}"
+    echo -e "${CYAN}[Info] Deployment running in background screen session (ritual).${NC"
 
     # User input (Private Key)
     echo
     echo -e "${YELLOW}Configuring Ritual Node files...${NC}"
 
     read -p "$(echo -e "${BLUE}Enter your Private Key (0x...): ${NC}")" PRIVATE_KEY
+
+    # Validate Private Key format
+    if [[ ! "$PRIVATE_KEY" =~ ^0x[0-9a-fA-F]{64}$ ]]; then
+        echo -e "${RED}[Error] Invalid Private Key format. Must be 0x followed by 64 hexadecimal characters.${NC}"
+        exit 1
+    fi
 
     # Default settings
     RPC_URL="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
@@ -297,18 +303,34 @@ function install_ritual_node() {
     # Extract newly deployed contract address (e.g.: Deployed SaysHello:  0x...)
     NEW_ADDR=$(echo "$DEPLOY_OUTPUT" | grep -oP 'Deployed SaysHello:\s+\K0x[0-9a-fA-F]{40}')
     if [ -z "$NEW_ADDR" ]; then
-        echo -e "${YELLOW}[Warning] Could not find new contract address. May need to manually update CallContract.s.sol.${NC}"
+        echo -e "${RED}[Error] Could not find new contract address. Please check deploy output and update CallContract.s.sol manually.${NC}"
+        exit 1
     else
         echo -e "${GREEN}[Info] Deployed SaysHello address: $NEW_ADDR${NC}"
         # Replace old address with new address in CallContract.s.sol
-        # Example: SaysGM saysGm = SaysGM(0x13D69Cf7...) -> SaysGM saysGm = SaysGM(0xA529dB3c9...)
         sed -i "s|SaysGM saysGm = SaysGM(0x[0-9a-fA-F]\+);|SaysGM saysGm = SaysGM($NEW_ADDR);|" \
             projects/hello-world/contracts/script/CallContract.s.sol
+    fi
 
-        # Execute call-contract
-        echo
-        echo -e "${YELLOW}Executing call-contract with new address...${NC}"
-        project=hello-world make call-contract
+    # Verify contract address
+    if ! grep -q "$NEW_ADDR" projects/hello-world/contracts/script/CallContract.s.sol; then
+        echo -e "${RED}[Error] Failed to update CallContract.s.sol with new address $NEW_ADDR.${NC}"
+        exit 1
+    fi
+
+    # Execute call-contract with additional debugging
+    echo
+    echo -e "${YELLOW}Executing call-contract with new address...${NC}"
+    CALL_OUTPUT=$(project=hello-world make call-contract 2>&1)
+    CALL_STATUS=$?
+    echo "$CALL_OUTPUT"
+    if [ $CALL_STATUS -ne 0 ]; then
+        echo -e "${RED}[Error] Call-contract failed. Possible reasons:${NC}"
+        echo -e "${RED}- Insufficient funds in the account associated with PRIVATE_KEY.${NC}"
+        echo -e "${RED}- Incorrect function call in CallContract.s.sol.${NC}"
+        echo -e "${RED}- RPC URL issues (check $RPC_URL).${NC}"
+        echo -e "${YELLOW}Please verify the above and try again.${NC}"
+        exit 1
     fi
 
     echo
