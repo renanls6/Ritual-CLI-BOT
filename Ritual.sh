@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 display_header() {
     clear
     echo -e "${CYAN}"
-     echo -e " ${BLUE} ██████╗ ██╗  ██╗    ██████╗ ███████╗███╗   ██╗ █████╗ ███╗   ██╗${NC}"
+    echo -e " ${BLUE} ██████╗ ██╗  ██╗    ██████╗ ███████╗███╗   ██╗ █████╗ ███╗   ██╗${NC}"
     echo -e " ${BLUE}██╔═████╗╚██╗██╔╝    ██╔══██╗██╔════╝████╗  ██║██╔══██╗████╗  ██║${NC}"
     echo -e " ${BLUE}██║██╔██║ ╚███╔╝     ██████╔╝█████╗  ██╔██╗ ██║███████║██╔██╗ ██║${NC}"
     echo -e " ${BLUE}████╔╝██║ ██╔██╗     ██╔══██╗██╔══╝  ██║╚██╗██║██╔══██║██║╚██╗██║${NC}"
@@ -41,29 +41,24 @@ function main_menu() {
         echo -e "${BLUE}To exit the script, press Ctrl+C${NC}"
         echo -e "${YELLOW}Please select an operation:${NC}"
         echo -e "1) ${GREEN}Install Ritual Node${NC}"
-        echo -e "2) ${CYAN}View Ritual Node logs${NC}"
+        echo -e "2) ${CYAN}Reboot VPS${NC}"
         echo -e "3) ${RED}Remove Ritual Node${NC}"
         echo -e "4) ${MAGENTA}Exit script${NC}"
-        
+        echo -e "5) ${RED}Complete node removal (includes Docker, Foundry, etc.)${NC}"
+        echo -e "6) ${YELLOW}Reboot VPS automatically${NC}"
+        echo -e "7) ${CYAN}Choose RPC manually${NC}"
+
         read -p "$(echo -e "${BLUE}Enter your choice: ${NC}")" choice
 
         case $choice in
-            1) 
-                install_ritual_node
-                ;;
-            2)
-                view_logs
-                ;;
-            3)
-                remove_ritual_node
-                ;;
-            4)
-                echo -e "${GREEN}Exiting script!${NC}"
-                exit 0
-                ;;
-            *)
-                echo -e "${RED}Invalid option, please choose again.${NC}"
-                ;;
+            1) install_ritual_node ;;
+            2) reboot_vps ;;
+            3) remove_ritual_node ;;
+            4) echo -e "${GREEN}Exiting script!${NC}"; exit 0 ;;
+            5) complete_node_removal ;;
+            6) reboot_vps ;;
+            7) choose_rpc ;;
+            *) echo -e "${RED}Invalid option, please choose again.${NC}" ;;
         esac
 
         echo -e "${YELLOW}Press any key to continue...${NC}"
@@ -135,19 +130,11 @@ function install_ritual_node() {
     # Install Foundry and set up environment variables
     echo
     echo -e "${YELLOW}Installing Foundry...${NC}"
-    # Stop anvil if running
-    if pgrep anvil &>/dev/null; then
-        echo -e "${YELLOW}[Warning] anvil is running, stopping to update Foundry.${NC}"
-        pkill anvil
-        sleep 2
-    fi
-
     cd ~ || exit 1
     mkdir -p foundry
     cd foundry
     curl -L https://foundry.paradigm.xyz | bash
 
-    # Install or update
     $HOME/.foundry/bin/foundryup
 
     # Add ~/.foundry/bin to PATH
@@ -171,14 +158,6 @@ function install_ritual_node() {
     cd ~ || exit 1
 
     # Clone infernet-container-starter
-    # Check if directory exists and remove if it does
-    if [ -d "infernet-container-starter" ]; then
-        echo -e "${YELLOW}Directory infernet-container-starter exists, removing...${NC}"
-        rm -rf "infernet-container-starter"
-        echo -e "${GREEN}Directory infernet-container-starter removed.${NC}"
-    fi
-
-    # Clone repository
     echo -e "${YELLOW}Cloning infernet-container-starter...${NC}"
     git clone https://github.com/ritual-net/infernet-container-starter
 
@@ -190,15 +169,6 @@ function install_ritual_node() {
     docker pull ritualnetwork/hello-world-infernet:latest
 
     # Initial deployment in screen session (make deploy-container)
-    echo -e "${YELLOW}Checking for existing screen session 'ritual'...${NC}"
-
-    # Check if 'ritual' session exists
-    if screen -list | grep -q "ritual"; then
-        echo -e "${YELLOW}[Info] Found existing ritual session, terminating...${NC}"
-        screen -S ritual -X quit
-        sleep 1
-    fi
-
     echo -e "${YELLOW}Starting container deployment in screen session 'ritual'...${NC}"
     sleep 1
 
@@ -207,121 +177,23 @@ function install_ritual_node() {
 
     echo -e "${CYAN}[Info] Deployment running in background screen session (ritual).${NC}"
 
-    # User input (Private Key)
-    echo
-    echo -e "${YELLOW}Configuring Ritual Node files...${NC}"
-
-    read -p "$(echo -e "${BLUE}Enter your Private Key (0x...): ${NC}")" PRIVATE_KEY
-
-    # Default settings
-    RPC_URL="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
-    RPC_URL_SUB="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
-    # Replace registry address
-    REGISTRY="0x3B1554f346DFe5c482Bb4BA31b880c1C18412170"
-    SLEEP=3
-    START_SUB_ID=230000
-    BATCH_SIZE=800  # Recommended to use public RPC
-    TRAIL_HEAD_BLOCKS=3
-    INFERNET_VERSION="1.4.0"  # infernet image tag
-
-    # Modify config files
-    # Modify deploy/config.json
-    sed -i "s|\"registry_address\": \".*\"|\"registry_address\": \"$REGISTRY\"|" deploy/config.json
-    sed -i "s|\"private_key\": \".*\"|\"private_key\": \"$PRIVATE_KEY\"|" deploy/config.json
-    sed -i "s|\"sleep\": [0-9]*|\"sleep\": $SLEEP|" deploy/config.json
-    sed -i "s|\"starting_sub_id\": [0-9]*|\"starting_sub_id\": $START_SUB_ID|" deploy/config.json
-    sed -i "s|\"batch_size\": [0-9]*|\"batch_size\": $BATCH_SIZE|" deploy/config.json
-    sed -i "s|\"trail_head_blocks\": [0-9]*|\"trail_head_blocks\": $TRAIL_HEAD_BLOCKS|" deploy/config.json
-    sed -i 's|"rpc_url": ".*"|"rpc_url": "https://mainnet.base.org"|' deploy/config.json
-    sed -i 's|"rpc_url": ".*"|"rpc_url": "https://mainnet.base.org"|' projects/hello-world/container/config.json
-
-    # Modify projects/hello-world/container/config.json
-    sed -i "s|\"registry_address\": \".*\"|\"registry_address\": \"$REGISTRY\"|" projects/hello-world/container/config.json
-    sed -i "s|\"private_key\": \".*\"|\"private_key\": \"$PRIVATE_KEY\"|" projects/hello-world/container/config.json
-    sed -i "s|\"sleep\": [0-9]*|\"sleep\": $SLEEP|" projects/hello-world/container/config.json
-    sed -i "s|\"starting_sub_id\": [0-9]*|\"starting_sub_id\": $START_SUB_ID|" projects/hello-world/container/config.json
-    sed -i "s|\"batch_size\": [0-9]*|\"batch_size\": $BATCH_SIZE|" projects/hello-world/container/config.json
-    sed -i "s|\"trail_head_blocks\": [0-9]*|\"trail_head_blocks\": $TRAIL_HEAD_BLOCKS|" projects/hello-world/container/config.json
-
-    # Modify Deploy.s.sol
-    sed -i "s|\(registry\s*=\s*\).*|\1$REGISTRY;|" projects/hello-world/contracts/script/Deploy.s.sol
-    sed -i "s|\(RPC_URL\s*=\s*\).*|\1\"$RPC_URL\";|" projects/hello-world/contracts/script/Deploy.s.sol
-
-    # Use latest node image
-    sed -i 's|ritualnetwork/infernet-node:[^"]*|ritualnetwork/infernet-node:latest|' deploy/docker-compose.yaml
-
-    # Modify Makefile (sender, RPC_URL)
-    MAKEFILE_PATH="projects/hello-world/contracts/Makefile"
-    sed -i "s|^sender := .*|sender := $PRIVATE_KEY|"  "$MAKEFILE_PATH"
-    sed -i "s|^RPC_URL := .*|RPC_URL := $RPC_URL|"    "$MAKEFILE_PATH"
-
-    # Enter project directory
-    cd ~/infernet-container-starter || exit 1
-
-    # Restart containers
-    echo
-    echo -e "${YELLOW}Running docker compose down & up...${NC}"
-    docker compose -f deploy/docker-compose.yaml down
-    docker compose -f deploy/docker-compose.yaml up -d
-
-    echo
-    echo -e "${CYAN}[Info] Containers running in background (-d).${NC}"
-    echo -e "${YELLOW}Use 'docker ps' to check status. View logs with: docker logs infernet-node${NC}"
-
-    # Install Forge libraries (resolve conflicts)
-    echo
-    echo -e "${YELLOW}Installing Forge (project dependencies)${NC}"
-    cd projects/hello-world/contracts || exit 1
-    rm -rf lib/forge-std
-    rm -rf lib/infernet-sdk
-
-    forge install --no-commit foundry-rs/forge-std
-    forge install --no-commit ritual-net/infernet-sdk
-
-    # Restart containers
-    echo
-    echo -e "${YELLOW}Restarting docker compose...${NC}"
-    cd ~/infernet-container-starter || exit 1
-    docker compose -f deploy/docker-compose.yaml down
-    docker compose -f deploy/docker-compose.yaml up -d
-    echo -e "${CYAN}[Info] View infernet-node logs: docker logs infernet-node${NC}"
-
-    # Deploy project contracts
-    echo
-    echo -e "${YELLOW}Deploying project contracts...${NC}"
-    DEPLOY_OUTPUT=$(project=hello-world make deploy-contracts 2>&1)
-    echo "$DEPLOY_OUTPUT"
-
-    # Extract newly deployed contract address (e.g.: Deployed SaysHello:  0x...)
-    NEW_ADDR=$(echo "$DEPLOY_OUTPUT" | grep -oP 'Deployed SaysHello:\s+\K0x[0-9a-fA-F]{40}')
-    if [ -z "$NEW_ADDR" ]; then
-        echo -e "${YELLOW}[Warning] Could not find new contract address. May need to manually update CallContract.s.sol.${NC}"
-    else
-        echo -e "${GREEN}[Info] Deployed SaysHello address: $NEW_ADDR${NC}"
-        # Replace old address with new address in CallContract.s.sol
-        # Example: SaysGM saysGm = SaysGM(0x13D69Cf7...) -> SaysGM saysGm = SaysGM(0xA529dB3c9...)
-        sed -i "s|SaysGM saysGm = SaysGM(0x[0-9a-fA-F]\+);|SaysGM saysGm = SaysGM($NEW_ADDR);|" \
-            projects/hello-world/contracts/script/CallContract.s.sol
-
-        # Execute call-contract
-        echo
-        echo -e "${YELLOW}Executing call-contract with new address...${NC}"
-        project=hello-world make call-contract
-    fi
-
-    echo
-    echo -e "${GREEN}===== Ritual Node Setup Complete =====${NC}"
-
-    # Prompt to return to main menu
     read -n 1 -s -r -p "$(echo -e "${YELLOW}Press any key to return to main menu...${NC}")"
     main_menu
 }
 
-# View Ritual Node logs function
-function view_logs() {
+# Reboot VPS function
+function reboot_vps() {
     display_header
-    echo -e "${YELLOW}Viewing Ritual Node logs...${NC}"
-    docker logs -f infernet-node
+    echo -e "${RED}WARNING: This will reboot your VPS immediately.${NC}"
+    read -p "$(echo -e "${YELLOW}Are you sure you want to proceed? (y/n): ${NC}")" confirm
+    if [[ "$confirm" == "y" ]]; then
+        echo -e "${GREEN}Rebooting VPS...${NC}"
+        sleep 2
+        reboot
+    else
+        echo -e "${CYAN}Operation cancelled.${NC}"
+    fi
+    read -n 1 -s -r -p "$(echo -e "${YELLOW}Press any key to return to menu...${NC}")"
 }
 
 # Remove Ritual Node function
@@ -345,5 +217,56 @@ function remove_ritual_node() {
     echo -e "${GREEN}Ritual Node successfully removed!${NC}"
 }
 
-# Call main menu function
+# Complete node removal function
+function complete_node_removal() {
+    display_header
+    echo -e "${RED}WARNING: This option completely removes the Ritual environment including Docker, Foundry, etc.${NC}"
+    read -p "$(echo -e "${YELLOW}Are you sure you want to proceed? (y/n): ${NC}")" confirm
+    if [[ "$confirm" != "y" ]]; then
+        echo -e "${CYAN}Operation cancelled.${NC}"
+        return
+    fi
+
+    echo -e "${YELLOW}Removing Docker containers, images, and volumes...${NC}"
+    docker compose -f ~/infernet-container-starter/deploy/docker-compose.yaml down --volumes --remove-orphans
+    docker system prune -a -f --volumes
+
+    echo -e "${YELLOW}Removing Foundry...${NC}"
+    rm -rf ~/.foundry ~/foundry
+
+    echo -e "${YELLOW}Removing infernet-container-starter...${NC}"
+    rm -rf ~/infernet-container-starter
+
+    echo -e "${YELLOW}Removing Python packages...${NC}"
+    pip3 uninstall -y infernet-cli infernet-client
+
+    echo -e "${YELLOW}Removing Docker and related packages...${NC}"
+    apt-get purge -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+    apt-get autoremove -y
+    rm -rf /var/lib/docker /etc/docker
+
+    echo -e "${GREEN}Complete removal finished.${NC}"
+    read -n 1 -s -r -p "$(echo -e "${YELLOW}Press any key to return to menu...${NC}")"
+}
+
+# Choose RPC function
+function choose_rpc() {
+    display_header
+    echo -e "${CYAN}Please enter the RPC URL (e.g., https://rpc.ritual.network):${NC}"
+    read -p "$(echo -e "${BLUE}Enter the RPC URL: ${NC}")" rpc_url
+
+    if [ -z "$rpc_url" ]; then
+        echo -e "${RED}You must provide a valid RPC URL!${NC}"
+        return
+    fi
+
+    # Set the RPC URL in the environment
+    echo -e "${CYAN}Setting RPC URL to: $rpc_url${NC}"
+    export RPC_URL="$rpc_url"
+
+    echo -e "${GREEN}RPC URL successfully set.${NC}"
+    read -n 1 -s -r -p "$(echo -e "${YELLOW}Press any key to return to the main menu...${NC}")"
+}
+
+# Run the main menu function
 main_menu
