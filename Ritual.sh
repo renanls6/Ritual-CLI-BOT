@@ -42,7 +42,7 @@ function main_menu() {
         echo -e "${YELLOW}Please select an operation:${NC}"
         echo -e "1) ${GREEN}Install Ritual Node${NC}"
         echo -e "2) ${CYAN}Reboot VPS${NC}"
-        echo -e "3) ${RED}Remove Ritual Node (includes Docker, Foundry, etc.)${NC}"
+        echo -e "3) ${RED}Remove Ritual Node${NC}"
         echo -e "4) ${MAGENTA}Exit script${NC}"
 
         read -p "$(echo -e "${BLUE}Enter your choice: ${NC}")" choice
@@ -212,14 +212,9 @@ function remove_ritual_node_and_complete_removal() {
 function reboot_vps() {
     display_header
     echo -e "${RED}WARNING: This will reboot your VPS immediately.${NC}"
-    read -p "$(echo -e "${YELLOW}Are you sure you want to proceed? (y/n): ${NC}")" confirm
-    if [[ "$confirm" == "y" ]]; then
-        echo -e "${GREEN}Rebooting VPS...${NC}"
-        sleep 2
-        reboot
-    else
-        echo -e "${CYAN}Operation cancelled.${NC}"
-    fi
+    echo -e "${CYAN}Rebooting VPS...${NC}"
+    sleep 2
+    reboot
     read -n 1 -s -r -p "$(echo -e "${YELLOW}Press any key to return to menu...${NC}")"
 }
 
