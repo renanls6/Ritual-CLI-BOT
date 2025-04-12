@@ -44,8 +44,6 @@ function main_menu() {
         echo -e "2) ${CYAN}Reboot VPS${NC}"
         echo -e "3) ${RED}Remove Ritual Node (includes Docker, Foundry, etc.)${NC}"
         echo -e "4) ${MAGENTA}Exit script${NC}"
-        echo -e "5) ${CYAN}Reboot VPS automatically${NC}"
-        echo -e "6) ${YELLOW}Choose RPC manually${NC}"
 
         read -p "$(echo -e "${BLUE}Enter your choice: ${NC}")" choice
 
@@ -54,8 +52,6 @@ function main_menu() {
             2) reboot_vps ;;
             3) remove_ritual_node_and_complete_removal ;;
             4) echo -e "${GREEN}Exiting script!${NC}"; exit 0 ;;
-            5) reboot_vps ;;
-            6) choose_rpc ;;
             *) echo -e "${RED}Invalid option, please choose again.${NC}" ;;
         esac
 
@@ -187,30 +183,26 @@ function install_ritual_node() {
 function remove_ritual_node_and_complete_removal() {
     display_header
     echo -e "${RED}WARNING: This will remove the Ritual Node, Docker, Foundry, and all related files.${NC}"
-    read -p "$(echo -e "${YELLOW}Are you sure you want to proceed? (y/n): ${NC}")" confirm
-    if [[ "$confirm" == "y" ]]; then
-        # Stop and remove Docker containers and images
-        echo -e "${YELLOW}Stopping and removing Docker containers...${NC}"
-        docker stop $(docker ps -q) && docker rm $(docker ps -aq)
-        docker system prune -f
 
-        # Remove Docker
-        echo -e "${YELLOW}Removing Docker...${NC}"
-        sudo apt remove --purge -y docker-ce docker-ce-cli containerd.io
+    # Stop and remove Docker containers and images
+    echo -e "${YELLOW}Stopping and removing Docker containers...${NC}"
+    docker stop $(docker ps -q) && docker rm $(docker ps -aq)
+    docker system prune -f
 
-        # Remove Foundry
-        echo -e "${YELLOW}Removing Foundry...${NC}"
-        rm -rf ~/.foundry
+    # Remove Docker
+    echo -e "${YELLOW}Removing Docker...${NC}"
+    sudo apt remove --purge -y docker-ce docker-ce-cli containerd.io
 
-        # Remove Ritual-related files and directories
-        echo -e "${YELLOW}Removing Ritual-related files...${NC}"
-        rm -rf ~/infernet-container-starter
-        rm -rf ~/Ritual.sh
+    # Remove Foundry
+    echo -e "${YELLOW}Removing Foundry...${NC}"
+    rm -rf ~/.foundry
 
-        echo -e "${GREEN}Ritual Node and related files have been completely removed.${NC}"
-    else
-        echo -e "${CYAN}Operation cancelled.${NC}"
-    fi
+    # Remove Ritual-related files and directories
+    echo -e "${YELLOW}Removing Ritual-related files...${NC}"
+    rm -rf ~/infernet-container-starter
+    rm -rf ~/Ritual.sh
+
+    echo -e "${GREEN}Ritual Node and related files have been completely removed.${NC}"
 
     read -n 1 -s -r -p "$(echo -e "${YELLOW}Press any key to return to main menu...${NC}")"
     main_menu
