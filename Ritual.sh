@@ -347,3 +347,6 @@ function remove_ritual_node() {
 
 # Call main menu function
 main_menu
+
+# Call main menu function
+main_menu
