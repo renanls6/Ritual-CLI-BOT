@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 display_header() {
     clear
     echo -e "${CYAN}"
-    echo -e " ${BLUE} ██████╗ ██╗  ██╗    ██████╗ ███████╗███╗   ██╗ █████╗ ███╗   ██╗${NC}"
+     echo -e " ${BLUE} ██████╗ ██╗  ██╗    ██████╗ ███████╗███╗   ██╗ █████╗ ███╗   ██╗${NC}"
     echo -e " ${BLUE}██╔═████╗╚██╗██╔╝    ██╔══██╗██╔════╝████╗  ██║██╔══██╗████╗  ██║${NC}"
     echo -e " ${BLUE}██║██╔██║ ╚███╔╝     ██████╔╝█████╗  ██╔██╗ ██║███████║██╔██╗ ██║${NC}"
     echo -e " ${BLUE}████╔╝██║ ██╔██╗     ██╔══██╗██╔══╝  ██║╚██╗██║██╔══██║██║╚██╗██║${NC}"
@@ -33,18 +33,6 @@ fi
 
 # Script save path
 SCRIPT_PATH="$HOME/Ritual.sh"
-
-# Default settings
-RPC_URL="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
-RPC_URL_SUB="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
-# Replace registry address
-REGISTRY="0x3B1554f346DFe5c482Bb4BA31b880c1C18412170"
-SLEEP=3
-START_SUB_ID=239000
-BATCH_SIZE=800  # Recommended to use public RPC
-TRAIL_HEAD_BLOCKS=3
-INFERNET_VERSION="1.4.0"  # infernet image tag
-SYNC_PERIOD=30  # Adicionando a variável sync_period
 
 # Main menu function
 function main_menu() {
@@ -219,47 +207,70 @@ function install_ritual_node() {
 
     echo -e "${CYAN}[Info] Deployment running in background screen session (ritual).${NC}"
 
-    # User input to update JSON files with snapshot_sync configuration
-    jq --argjson sleep $SLEEP \
-       --argjson batch_size $BATCH_SIZE \
-       --argjson starting_sub_id $START_SUB_ID \
-       --argjson sync_period $SYNC_PERIOD \
-       '.snapshot_sync = {
-         sleep: $sleep,
-         batch_size: $batch_size,
-         starting_sub_id: $starting_sub_id,
-         sync_period: $sync_period
-       }' deploy/config.json > tmp.$$.json && mv tmp.$$.json deploy/config.json
+    # User input (Private Key)
+    echo
+    echo -e "${YELLOW}Configuring Ritual Node files...${NC}"
 
-    jq --argjson sleep $SLEEP \
-       --argjson batch_size $BATCH_SIZE \
-       --argjson starting_sub_id $START_SUB_ID \
-       --argjson sync_period $SYNC_PERIOD \
-       '.snapshot_sync = {
-         sleep: $sleep,
-         batch_size: $batch_size,
-         starting_sub_id: $starting_sub_id,
-         sync_period: $sync_period
-       }' projects/hello-world/container/config.json > tmp.$$.json && mv tmp.$$.json projects/hello-world/container/config.json
+    read -p "$(echo -e "${BLUE}Enter your Private Key (0x...): ${NC}")" PRIVATE_KEY
 
-    echo -e "${GREEN}[Info] Ritual Node installation complete.${NC}"
+    # Default settings
+    RPC_URL="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
+    RPC_URL_SUB="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
+    REGISTRY="0x3B1554f346DFe5c482Bb4BA31b880c1C18412170"
+    SLEEP=3
+    START_SUB_ID=239000
+    BATCH_SIZE=800  # Recommended to use public RPC
+    TRAIL_HEAD_BLOCKS=3
+    INFERNET_VERSION="1.4.0"  # infernet image tag
+    SYNC_PERIOD=30  # Sync period in seconds
+
+    # Update config.json with settings
+    sed -i "s|\"rpc_url\": \".*\"|\"rpc_url\": \"$RPC_URL\"|" deploy/config.json
+    sed -i "s|\"rpc_url_sub\": \".*\"|\"rpc_url_sub\": \"$RPC_URL_SUB\"|" deploy/config.json
+    sed -i "s|\"registry\": \".*\"|\"registry\": \"$REGISTRY\"|" deploy/config.json
+    sed -i "s|\"sleep\": [0-9]*|\"sleep\": $SLEEP|" deploy/config.json
+    sed -i "s|\"start_sub_id\": [0-9]*|\"start_sub_id\": $START_SUB_ID|" deploy/config.json
+    sed -i "s|\"batch_size\": [0-9]*|\"batch_size\": $BATCH_SIZE|" deploy/config.json
+    sed -i "s|\"trail_head_blocks\": [0-9]*|\"trail_head_blocks\": $TRAIL_HEAD_BLOCKS|" deploy/config.json
+    sed -i "s|\"infernet_version\": \".*\"|\"infernet_version\": \"$INFERNET_VERSION\"|" deploy/config.json
+    sed -i "s|\"sync_period\": [0-9]*|\"sync_period\": $SYNC_PERIOD|" deploy/config.json
+
+    echo -e "${GREEN}[Info] Ritual Node successfully installed!${NC}"
 }
 
-# View logs function
+# View Ritual Node logs function
 function view_logs() {
     display_header
-    echo -e "${YELLOW}Fetching and displaying Ritual Node logs...${NC}"
-    screen -r ritual
+    # Check if screen session 'ritual' exists
+    if screen -list | grep -q "ritual"; then
+        echo -e "${CYAN}[Info] Viewing Ritual Node logs...${NC}"
+        screen -r ritual
+    else
+        echo -e "${RED}[Error] Ritual Node screen session not found.${NC}"
+    fi
 }
 
 # Remove Ritual Node function
 function remove_ritual_node() {
     display_header
     echo -e "${RED}Removing Ritual Node...${NC}"
-    screen -S ritual -X quit
-    rm -rf ~/infernet-container-starter
-    echo -e "${GREEN}Ritual Node removed successfully!${NC}"
+
+    # Check if screen session 'ritual' exists and terminate it
+    if screen -list | grep -q "ritual"; then
+        echo -e "${YELLOW}Found existing ritual session, terminating...${NC}"
+        screen -S ritual -X quit
+    fi
+
+    # Remove the directory
+    echo -e "${YELLOW}Removing Ritual Node directory...${NC}"
+    rm -rf ~/Ritual.sh
+
+    # Clean up Docker containers
+    echo -e "${YELLOW}Removing Docker containers...${NC}"
+    docker system prune -af
+
+    echo -e "${GREEN}[Info] Ritual Node successfully removed!${NC}"
 }
 
-# Run main menu
+# Call main menu function
 main_menu
