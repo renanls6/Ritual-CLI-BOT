@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 display_header() {
     clear
     echo -e "${CYAN}"
-     echo -e " ${BLUE} ██████╗ ██╗  ██╗    ██████╗ ███████╗███╗   ██╗ █████╗ ███╗   ██╗${NC}"
+    echo -e " ${BLUE} ██████╗ ██╗  ██╗    ██████╗ ███████╗███╗   ██╗ █████╗ ███╗   ██╗${NC}"
     echo -e " ${BLUE}██╔═████╗╚██╗██╔╝    ██╔══██╗██╔════╝████╗  ██║██╔══██╗████╗  ██║${NC}"
     echo -e " ${BLUE}██║██╔██║ ╚███╔╝     ██████╔╝█████╗  ██╔██╗ ██║███████║██╔██╗ ██║${NC}"
     echo -e " ${BLUE}████╔╝██║ ██╔██╗     ██╔══██╗██╔══╝  ██║╚██╗██║██╔══██║██║╚██╗██║${NC}"
@@ -33,6 +33,18 @@ fi
 
 # Script save path
 SCRIPT_PATH="$HOME/Ritual.sh"
+
+# Default settings
+RPC_URL="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
+RPC_URL_SUB="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
+# Replace registry address
+REGISTRY="0x3B1554f346DFe5c482Bb4BA31b880c1C18412170"
+SLEEP=3
+START_SUB_ID=239000
+BATCH_SIZE=800  # Recommended to use public RPC
+TRAIL_HEAD_BLOCKS=3
+INFERNET_VERSION="1.4.0"  # infernet image tag
+SYNC_PERIOD=30  # Adicionando a variável sync_period
 
 # Main menu function
 function main_menu() {
@@ -207,143 +219,47 @@ function install_ritual_node() {
 
     echo -e "${CYAN}[Info] Deployment running in background screen session (ritual).${NC}"
 
-    # User input (Private Key)
-    echo
-    echo -e "${YELLOW}Configuring Ritual Node files...${NC}"
+    # User input to update JSON files with snapshot_sync configuration
+    jq --argjson sleep $SLEEP \
+       --argjson batch_size $BATCH_SIZE \
+       --argjson starting_sub_id $START_SUB_ID \
+       --argjson sync_period $SYNC_PERIOD \
+       '.snapshot_sync = {
+         sleep: $sleep,
+         batch_size: $batch_size,
+         starting_sub_id: $starting_sub_id,
+         sync_period: $sync_period
+       }' deploy/config.json > tmp.$$.json && mv tmp.$$.json deploy/config.json
 
-    read -p "$(echo -e "${BLUE}Enter your Private Key (0x...): ${NC}")" PRIVATE_KEY
+    jq --argjson sleep $SLEEP \
+       --argjson batch_size $BATCH_SIZE \
+       --argjson starting_sub_id $START_SUB_ID \
+       --argjson sync_period $SYNC_PERIOD \
+       '.snapshot_sync = {
+         sleep: $sleep,
+         batch_size: $batch_size,
+         starting_sub_id: $starting_sub_id,
+         sync_period: $sync_period
+       }' projects/hello-world/container/config.json > tmp.$$.json && mv tmp.$$.json projects/hello-world/container/config.json
 
-    # Default settings
-    RPC_URL="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
-    RPC_URL_SUB="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
-    # Replace registry address
-    REGISTRY="0x3B1554f346DFe5c482Bb4BA31b880c1C18412170"
-    SLEEP=3
-    START_SUB_ID=239000
-    BATCH_SIZE=800  # Recommended to use public RPC
-    TRAIL_HEAD_BLOCKS=3
-    INFERNET_VERSION="1.4.0"  # infernet image tag
-
-    # Modify config files
-    # Modify deploy/config.json
-    sed -i "s|\"registry_address\": \".*\"|\"registry_address\": \"$REGISTRY\"|" deploy/config.json
-    sed -i "s|\"private_key\": \".*\"|\"private_key\": \"$PRIVATE_KEY\"|" deploy/config.json
-    sed -i "s|\"sleep\": [0-9]*|\"sleep\": $SLEEP|" deploy/config.json
-    sed -i "s|\"starting_sub_id\": [0-9]*|\"starting_sub_id\": $START_SUB_ID|" deploy/config.json
-    sed -i "s|\"batch_size\": [0-9]*|\"batch_size\": $BATCH_SIZE|" deploy/config.json
-    sed -i "s|\"trail_head_blocks\": [0-9]*|\"trail_head_blocks\": $TRAIL_HEAD_BLOCKS|" deploy/config.json
-    sed -i 's|"rpc_url": ".*"|"rpc_url": "https://mainnet.base.org"|' deploy/config.json
-    sed -i 's|"rpc_url": ".*"|"rpc_url": "https://mainnet.base.org"|' projects/hello-world/container/config.json
-
-    # Modify projects/hello-world/container/config.json
-    sed -i "s|\"registry_address\": \".*\"|\"registry_address\": \"$REGISTRY\"|" projects/hello-world/container/config.json
-    sed -i "s|\"private_key\": \".*\"|\"private_key\": \"$PRIVATE_KEY\"|" projects/hello-world/container/config.json
-    sed -i "s|\"sleep\": [0-9]*|\"sleep\": $SLEEP|" projects/hello-world/container/config.json
-    sed -i "s|\"starting_sub_id\": [0-9]*|\"starting_sub_id\": $START_SUB_ID|" projects/hello-world/container/config.json
-    sed -i "s|\"batch_size\": [0-9]*|\"batch_size\": $BATCH_SIZE|" projects/hello-world/container/config.json
-    sed -i "s|\"trail_head_blocks\": [0-9]*|\"trail_head_blocks\": $TRAIL_HEAD_BLOCKS|" projects/hello-world/container/config.json
-
-    # Modify Deploy.s.sol
-    sed -i "s|\(registry\s*=\s*\).*|\1$REGISTRY;|" projects/hello-world/contracts/script/Deploy.s.sol
-    sed -i "s|\(RPC_URL\s*=\s*\).*|\1\"$RPC_URL\";|" projects/hello-world/contracts/script/Deploy.s.sol
-
-    # Use latest node image
-    sed -i 's|ritualnetwork/infernet-node:[^"]*|ritualnetwork/infernet-node:latest|' deploy/docker-compose.yaml
-
-    # Modify Makefile (sender, RPC_URL)
-    MAKEFILE_PATH="projects/hello-world/contracts/Makefile"
-    sed -i "s|^sender := .*|sender := $PRIVATE_KEY|"  "$MAKEFILE_PATH"
-    sed -i "s|^RPC_URL := .*|RPC_URL := $RPC_URL|"    "$MAKEFILE_PATH"
-
-    # Enter project directory
-    cd ~/infernet-container-starter || exit 1
-
-    # Restart containers
-    echo
-    echo -e "${YELLOW}Running docker compose down & up...${NC}"
-    docker compose -f deploy/docker-compose.yaml down
-    docker compose -f deploy/docker-compose.yaml up -d
-
-    echo
-    echo -e "${CYAN}[Info] Containers running in background (-d).${NC}"
-    echo -e "${YELLOW}Use 'docker ps' to check status. View logs with: docker logs infernet-node${NC}"
-
-    # Install Forge libraries (resolve conflicts)
-    echo
-    echo -e "${YELLOW}Installing Forge (project dependencies)${NC}"
-    cd projects/hello-world/contracts || exit 1
-    rm -rf lib/forge-std
-    rm -rf lib/infernet-sdk
-
-    forge install --no-commit foundry-rs/forge-std
-    forge install --no-commit ritual-net/infernet-sdk
-
-    # Restart containers
-    echo
-    echo -e "${YELLOW}Restarting docker compose...${NC}"
-    cd ~/infernet-container-starter || exit 1
-    docker compose -f deploy/docker-compose.yaml down
-    docker compose -f deploy/docker-compose.yaml up -d
-    echo -e "${CYAN}[Info] View infernet-node logs: docker logs infernet-node${NC}"
-
-    # Deploy project contracts
-    echo
-    echo -e "${YELLOW}Deploying project contracts...${NC}"
-    DEPLOY_OUTPUT=$(project=hello-world make deploy-contracts 2>&1)
-    echo "$DEPLOY_OUTPUT"
-
-    # Extract newly deployed contract address (e.g.: Deployed SaysHello:  0x...)
-    NEW_ADDR=$(echo "$DEPLOY_OUTPUT" | grep -oP 'Deployed SaysHello:\s+\K0x[0-9a-fA-F]{40}')
-    if [ -z "$NEW_ADDR" ]; then
-        echo -e "${YELLOW}[Warning] Could not find new contract address. May need to manually update CallContract.s.sol.${NC}"
-    else
-        echo -e "${GREEN}[Info] Deployed SaysHello address: $NEW_ADDR${NC}"
-        # Replace old address with new address in CallContract.s.sol
-        # Example: SaysGM saysGm = SaysGM(0x13D69Cf7...) -> SaysGM saysGm = SaysGM(0xA529dB3c9...)
-        sed -i "s|SaysGM saysGm = SaysGM(0x[0-9a-fA-F]\+);|SaysGM saysGm = SaysGM($NEW_ADDR);|" \
-            projects/hello-world/contracts/script/CallContract.s.sol
-
-        # Execute call-contract
-        echo
-        echo -e "${YELLOW}Executing call-contract with new address...${NC}"
-        project=hello-world make call-contract
-    fi
-
-    echo
-    echo -e "${GREEN}===== Ritual Node Setup Complete =====${NC}"
-
-    # Prompt to return to main menu
-    read -n 1 -s -r -p "$(echo -e "${YELLOW}Press any key to return to main menu...${NC}")"
-    main_menu
+    echo -e "${GREEN}[Info] Ritual Node installation complete.${NC}"
 }
 
-# View Ritual Node logs function
+# View logs function
 function view_logs() {
     display_header
-    echo -e "${YELLOW}Viewing Ritual Node logs...${NC}"
-    docker logs -f infernet-node
+    echo -e "${YELLOW}Fetching and displaying Ritual Node logs...${NC}"
+    screen -r ritual
 }
 
 # Remove Ritual Node function
 function remove_ritual_node() {
     display_header
     echo -e "${RED}Removing Ritual Node...${NC}"
-
-    # Stop and remove Docker containers
-    echo -e "${YELLOW}Stopping and removing Docker containers...${NC}"
-    cd /root/infernet-container-starter
-    docker compose down
-
-    # Remove repository files
-    echo -e "${YELLOW}Removing related files...${NC}"
+    screen -S ritual -X quit
     rm -rf ~/infernet-container-starter
-
-    # Remove Docker image
-    echo -e "${YELLOW}Removing Docker image...${NC}"
-    docker rmi ritualnetwork/hello-world-infernet:latest
-
-    echo -e "${GREEN}Ritual Node successfully removed!${NC}"
+    echo -e "${GREEN}Ritual Node removed successfully!${NC}"
 }
 
-# Call main menu function
+# Run main menu
 main_menu
