@@ -1,1 +1,6 @@
-source <(wget -O - https://raw.githubusercontent.com/renanls6/ritual-bot/main/Ritual.sh)
+
+# 1. Install Node
+
+```bash 
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
