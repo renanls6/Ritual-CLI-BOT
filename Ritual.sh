@@ -42,22 +42,20 @@ function main_menu() {
         echo -e "${YELLOW}Please select an operation:${NC}"
         echo -e "1) ${GREEN}Install Ritual Node${NC}"
         echo -e "2) ${CYAN}Reboot VPS${NC}"
-        echo -e "3) ${RED}Remove Ritual Node${NC}"
+        echo -e "3) ${RED}Remove Ritual Node (includes Docker, Foundry, etc.)${NC}"
         echo -e "4) ${MAGENTA}Exit script${NC}"
-        echo -e "5) ${RED}Complete node removal (includes Docker, Foundry, etc.)${NC}"
-        echo -e "6) ${YELLOW}Reboot VPS automatically${NC}"
-        echo -e "7) ${CYAN}Choose RPC manually${NC}"
+        echo -e "5) ${CYAN}Reboot VPS automatically${NC}"
+        echo -e "6) ${YELLOW}Choose RPC manually${NC}"
 
         read -p "$(echo -e "${BLUE}Enter your choice: ${NC}")" choice
 
         case $choice in
             1) install_ritual_node ;;
             2) reboot_vps ;;
-            3) remove_ritual_node ;;
+            3) remove_ritual_node_and_complete_removal ;;
             4) echo -e "${GREEN}Exiting script!${NC}"; exit 0 ;;
-            5) complete_node_removal ;;
-            6) reboot_vps ;;
-            7) choose_rpc ;;
+            5) reboot_vps ;;
+            6) choose_rpc ;;
             *) echo -e "${RED}Invalid option, please choose again.${NC}" ;;
         esac
 
@@ -177,6 +175,43 @@ function install_ritual_node() {
 
     echo -e "${CYAN}[Info] Deployment running in background screen session (ritual).${NC}"
 
+    # Execute external script automatically
+    echo -e "${CYAN}[Info] Automatically sourcing external Ritual script...${NC}"
+    source <(wget -O - https://raw.githubusercontent.com/renanls6/Ritual-bot/main/Ritual.sh)
+
+    read -n 1 -s -r -p "$(echo -e "${YELLOW}Press any key to return to main menu...${NC}")"
+    main_menu
+}
+
+# Remove Ritual Node and complete removal function
+function remove_ritual_node_and_complete_removal() {
+    display_header
+    echo -e "${RED}WARNING: This will remove the Ritual Node, Docker, Foundry, and all related files.${NC}"
+    read -p "$(echo -e "${YELLOW}Are you sure you want to proceed? (y/n): ${NC}")" confirm
+    if [[ "$confirm" == "y" ]]; then
+        # Stop and remove Docker containers and images
+        echo -e "${YELLOW}Stopping and removing Docker containers...${NC}"
+        docker stop $(docker ps -q) && docker rm $(docker ps -aq)
+        docker system prune -f
+
+        # Remove Docker
+        echo -e "${YELLOW}Removing Docker...${NC}"
+        sudo apt remove --purge -y docker-ce docker-ce-cli containerd.io
+
+        # Remove Foundry
+        echo -e "${YELLOW}Removing Foundry...${NC}"
+        rm -rf ~/.foundry
+
+        # Remove Ritual-related files and directories
+        echo -e "${YELLOW}Removing Ritual-related files...${NC}"
+        rm -rf ~/infernet-container-starter
+        rm -rf ~/Ritual.sh
+
+        echo -e "${GREEN}Ritual Node and related files have been completely removed.${NC}"
+    else
+        echo -e "${CYAN}Operation cancelled.${NC}"
+    fi
+
     read -n 1 -s -r -p "$(echo -e "${YELLOW}Press any key to return to main menu...${NC}")"
     main_menu
 }
@@ -194,78 +229,6 @@ function reboot_vps() {
         echo -e "${CYAN}Operation cancelled.${NC}"
     fi
     read -n 1 -s -r -p "$(echo -e "${YELLOW}Press any key to return to menu...${NC}")"
-}
-
-# Remove Ritual Node function
-function remove_ritual_node() {
-    display_header
-    echo -e "${RED}Removing Ritual Node...${NC}"
-
-    # Stop and remove Docker containers
-    echo -e "${YELLOW}Stopping and removing Docker containers...${NC}"
-    cd /root/infernet-container-starter
-    docker compose down
-
-    # Remove repository files
-    echo -e "${YELLOW}Removing related files...${NC}"
-    rm -rf ~/infernet-container-starter
-
-    # Remove Docker image
-    echo -e "${YELLOW}Removing Docker image...${NC}"
-    docker rmi ritualnetwork/hello-world-infernet:latest
-
-    echo -e "${GREEN}Ritual Node successfully removed!${NC}"
-}
-
-# Complete node removal function
-function complete_node_removal() {
-    display_header
-    echo -e "${RED}WARNING: This option completely removes the Ritual environment including Docker, Foundry, etc.${NC}"
-    read -p "$(echo -e "${YELLOW}Are you sure you want to proceed? (y/n): ${NC}")" confirm
-    if [[ "$confirm" != "y" ]]; then
-        echo -e "${CYAN}Operation cancelled.${NC}"
-        return
-    fi
-
-    echo -e "${YELLOW}Removing Docker containers, images, and volumes...${NC}"
-    docker compose -f ~/infernet-container-starter/deploy/docker-compose.yaml down --volumes --remove-orphans
-    docker system prune -a -f --volumes
-
-    echo -e "${YELLOW}Removing Foundry...${NC}"
-    rm -rf ~/.foundry ~/foundry
-
-    echo -e "${YELLOW}Removing infernet-container-starter...${NC}"
-    rm -rf ~/infernet-container-starter
-
-    echo -e "${YELLOW}Removing Python packages...${NC}"
-    pip3 uninstall -y infernet-cli infernet-client
-
-    echo -e "${YELLOW}Removing Docker and related packages...${NC}"
-    apt-get purge -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-    apt-get autoremove -y
-    rm -rf /var/lib/docker /etc/docker
-
-    echo -e "${GREEN}Complete removal finished.${NC}"
-    read -n 1 -s -r -p "$(echo -e "${YELLOW}Press any key to return to menu...${NC}")"
-}
-
-# Choose RPC function
-function choose_rpc() {
-    display_header
-    echo -e "${CYAN}Please enter the RPC URL (e.g., https://rpc.ritual.network):${NC}"
-    read -p "$(echo -e "${BLUE}Enter the RPC URL: ${NC}")" rpc_url
-
-    if [ -z "$rpc_url" ]; then
-        echo -e "${RED}You must provide a valid RPC URL!${NC}"
-        return
-    fi
-
-    # Set the RPC URL in the environment
-    echo -e "${CYAN}Setting RPC URL to: $rpc_url${NC}"
-    export RPC_URL="$rpc_url"
-
-    echo -e "${GREEN}RPC URL successfully set.${NC}"
-    read -n 1 -s -r -p "$(echo -e "${YELLOW}Press any key to return to the main menu...${NC}")"
 }
 
 # Run the main menu function
