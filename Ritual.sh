@@ -214,8 +214,8 @@ function install_ritual_node() {
     read -p "$(echo -e "${BLUE}Enter your Private Key (0x...): ${NC}")" PRIVATE_KEY
 
     # Default settings
-    RPC_URL="https://mainnet.base.org/"
-    RPC_URL_SUB="https://mainnet.base.org/"
+    RPC_URL="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
+    RPC_URL_SUB="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
     # Replace registry address
     REGISTRY="0x3B1554f346DFe5c482Bb4BA31b880c1C18412170"
     SLEEP=3
