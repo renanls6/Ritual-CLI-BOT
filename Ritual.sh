@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 display_header() {
     clear
     echo -e "${CYAN}"
-    echo -e " ${BLUE} ██████╗ ██╗  ██╗    ██████╗ ███████╗███╗   ██╗ █████╗ ███╗   ██╗${NC}"
+     echo -e " ${BLUE} ██████╗ ██╗  ██╗    ██████╗ ███████╗███╗   ██╗ █████╗ ███╗   ██╗${NC}"
     echo -e " ${BLUE}██╔═████╗╚██╗██╔╝    ██╔══██╗██╔════╝████╗  ██║██╔══██╗████╗  ██║${NC}"
     echo -e " ${BLUE}██║██╔██║ ╚███╔╝     ██████╔╝█████╗  ██╔██╗ ██║███████║██╔██╗ ██║${NC}"
     echo -e " ${BLUE}████╔╝██║ ██╔██╗     ██╔══██╗██╔══╝  ██║╚██╗██║██╔══██║██║╚██╗██║${NC}"
@@ -98,11 +98,15 @@ function install_ritual_node() {
         sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
         
         # Add Docker's official GPG key
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - 
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+        
+        # Add Docker repository
         sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
         
-        # Install Docker CE
+        # Update apt package index (after adding Docker repo)
         sudo apt update
+        
+        # Install Docker CE
         sudo apt install -y docker-ce docker-ce-cli containerd.io
         
         # Enable and start Docker service
@@ -207,21 +211,87 @@ function install_ritual_node() {
     echo
     echo -e "${YELLOW}Configuring Ritual Node files...${NC}"
 
-    read -p "$(echo -e "${BLUE}Enter your Private Key (0x...): ${NC}")" private_key
-    read -p "$(echo -e "${BLUE}Enter your RPC URL: ${NC}")" rpc_url
-    read -p "$(echo -e "${BLUE}Enter your network (e.g., goerli, mainnet): ${NC}")" network
+    read -p "$(echo -e "${BLUE}Enter your Private Key (0x...): ${NC}")" PRIVATE_KEY
 
-    # Add private key to .env file
-    echo -e "PRIVATE_KEY=$private_key" >> .env
-    echo -e "RPC_URL=$rpc_url" >> .env
-    echo -e "NETWORK=$network" >> .env
+    # Default settings
+    RPC_URL="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
+    RPC_URL_SUB="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
+    # Replace registry address
+    REGISTRY="0x3B1554f346DFe5c482Bb4BA31b880c1C18412170"
+    SLEEP=3
+    START_SUB_ID=239000
+    BATCH_SIZE=800  # Recommended to use public RPC
+    TRAIL_HEAD_BLOCKS=3
+    INFERNET_VERSION="1.4.0"  # infernet image tag
 
-    echo -e "${GREEN}[Info] Ritual Node installation complete.${NC}"
-    seed
-}
+    # Modify config files
+    # Modify deploy/config.json
+    sed -i "s|\"registry_address\": \".*\"|\"registry_address\": \"$REGISTRY\"|" deploy/config.json
+    sed -i "s|\"private_key\": \".*\"|\"private_key\": \"$PRIVATE_KEY\"|" deploy/config.json
+    sed -i "s|\"sleep\": [0-9]*|\"sleep\": $SLEEP|" deploy/config.json
+    sed -i "s|\"starting_sub_id\": [0-9]*|\"starting_sub_id\": $START_SUB_ID|" deploy/config.json
+    sed -i "s|\"batch_size\": [0-9]*|\"batch_size\": $BATCH_SIZE|" deploy/config.json
+    sed -i "s|\"trail_head_blocks\": [0-9]*|\"trail_head_blocks\": $TRAIL_HEAD_BLOCKS|" deploy/config.json
+    sed -i 's|"rpc_url": ".*"|"rpc_url": "https://mainnet.base.org"|' deploy/config.json
+    sed -i 's|"rpc_url": ".*"|"rpc_url": "https://mainnet.base.org"|' projects/hello-world/container/config.json
 
-# Seed function
-function seed() {
+    # Modify projects/hello-world/container/config.json
+    sed -i "s|\"registry_address\": \".*\"|\"registry_address\": \"$REGISTRY\"|" projects/hello-world/container/config.json
+    sed -i "s|\"private_key\": \".*\"|\"private_key\": \"$PRIVATE_KEY\"|" projects/hello-world/container/config.json
+    sed -i "s|\"sleep\": [0-9]*|\"sleep\": $SLEEP|" projects/hello-world/container/config.json
+    sed -i "s|\"starting_sub_id\": [0-9]*|\"starting_sub_id\": $START_SUB_ID|" projects/hello-world/container/config.json
+    sed -i "s|\"batch_size\": [0-9]*|\"batch_size\": $BATCH_SIZE|" projects/hello-world/container/config.json
+    sed -i "s|\"trail_head_blocks\": [0-9]*|\"trail_head_blocks\": $TRAIL_HEAD_BLOCKS|" projects/hello-world/container/config.json
+
+    # Modify Deploy.s.sol
+    sed -i "s|\(registry\s*=\s*\).*|\1$REGISTRY;|" projects/hello-world/contracts/script/Deploy.s.sol
+    sed -i "s|\(RPC_URL\s*=\s*\).*|\1\"$RPC_URL\";|" projects/hello-world/contracts/script/Deploy.s.sol
+
+    # Use latest node image
+    sed -i 's|ritualnetwork/infernet-node:[^"]*|ritualnetwork/infernet-node:latest|' deploy/docker-compose.yaml
+
+    # Modify Makefile (sender, RPC_URL)
+    MAKEFILE_PATH="projects/hello-world/contracts/Makefile"
+    sed -i "s|^sender := .*|sender := $PRIVATE_KEY|"  "$MAKEFILE_PATH"
+    sed -i "s|^RPC_URL := .*|RPC_URL := $RPC_URL|"    "$MAKEFILE_PATH"
+
+    # Enter project directory
+    cd ~/infernet-container-starter || exit 1
+
+    # Restart containers
+    echo
+    echo -e "${YELLOW}Running docker compose down & up...${NC}"
+    docker compose -f deploy/docker-compose.yaml down
+    docker compose -f deploy/docker-compose.yaml up -d
+
+    echo
+    echo -e "${CYAN}[Info] Containers running in background (-d).${NC}"
+    echo -e "${YELLOW}Use 'docker ps' to check status. View logs with: docker logs infernet-node${NC}"
+
+    # Install Forge libraries (resolve conflicts)
+    echo
+    echo -e "${YELLOW}Installing Forge (project dependencies)${NC}"
+    cd projects/hello-world/contracts || exit 1
+    rm -rf lib/forge-std
+    rm -rf lib/infernet-sdk
+
+    forge install --no-commit foundry-rs/forge-std
+    forge install --no-commit ritual-net/infernet-sdk
+
+    # Restart containers
+    echo
+    echo -e "${YELLOW}Restarting docker compose...${NC}"
+    cd ~/infernet-container-starter || exit 1
+    docker compose -f deploy/docker-compose.yaml down
+    docker compose -f deploy/docker-compose.yaml up -d
+    echo -e "${CYAN}[Info] View infernet-node logs: docker logs infernet-node${NC}"
+
+    # Deploy project contracts
+    echo
+    echo -e "${YELLOW}Deploying project contracts...${NC}"
+    DEPLOY_OUTPUT=$(project=hello-world make deploy-contracts 2>&1)
+    echo "$DEPLOY_OUTPUT"
+
     # Extract newly deployed contract address (e.g.: Deployed SaysHello:  0x...)
     NEW_ADDR=$(echo "$DEPLOY_OUTPUT" | grep -oP 'Deployed SaysHello:\s+\K0x[0-9a-fA-F]{40}')
     if [ -z "$NEW_ADDR" ]; then
@@ -232,16 +302,26 @@ function seed() {
         # Example: SaysGM saysGm = SaysGM(0x13D69Cf7...) -> SaysGM saysGm = SaysGM(0xA529dB3c9...)
         sed -i "s|SaysGM saysGm = SaysGM(0x[0-9a-fA-F]\+);|SaysGM saysGm = SaysGM($NEW_ADDR);|" \
             projects/hello-world/contracts/script/CallContract.s.sol
+
+        # Execute call-contract
+        echo
+        echo -e "${YELLOW}Executing call-contract with new address...${NC}"
+        project=hello-world make call-contract
     fi
+
+    echo
+    echo -e "${GREEN}===== Ritual Node Setup Complete =====${NC}"
+
+    # Prompt to return to main menu
+    read -n 1 -s -r -p "$(echo -e "${YELLOW}Press any key to return to main menu...${NC}")"
+    main_menu
 }
 
-# View logs function
+# View Ritual Node logs function
 function view_logs() {
     display_header
     echo -e "${YELLOW}Viewing Ritual Node logs...${NC}"
-    screen -S ritual -X logfile /tmp/ritual_logs.txt
-    screen -S ritual -X log on
-    tail -f /tmp/ritual_logs.txt
+    docker logs -f infernet-node
 }
 
 # Remove Ritual Node function
@@ -249,26 +329,21 @@ function remove_ritual_node() {
     display_header
     echo -e "${RED}Removing Ritual Node...${NC}"
 
-    # Stop running Docker containers
-    docker stop ritual-container
+    # Stop and remove Docker containers
+    echo -e "${YELLOW}Stopping and removing Docker containers...${NC}"
+    cd /root/infernet-container-starter
+    docker compose down
 
-    # Remove the container
-    docker rm ritual-container
+    # Remove repository files
+    echo -e "${YELLOW}Removing related files...${NC}"
+    rm -rf ~/infernet-container-starter
 
-    # Remove associated images
+    # Remove Docker image
+    echo -e "${YELLOW}Removing Docker image...${NC}"
     docker rmi ritualnetwork/hello-world-infernet:latest
 
-    # Delete project directory
-    rm -rf infernet-container-starter
-
-    # Remove environment file
-    rm -f .env
-
-    # Remove screen session
-    screen -S ritual -X quit
-
-    echo -e "${GREEN}[Info] Ritual Node removal complete.${NC}"
+    echo -e "${GREEN}Ritual Node successfully removed!${NC}"
 }
 
-# Run main menu
+# Call main menu function
 main_menu
