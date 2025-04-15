@@ -214,13 +214,13 @@ function install_ritual_node() {
     read -p "$(echo -e "${BLUE}Enter your Private Key (0x...): ${NC}")" PRIVATE_KEY
 
     # Default settings
-    RPC_URL="https://mainnet.base.org/"
-    RPC_URL_SUB="https://mainnet.base.org/"
+    RPC_URL="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
+    RPC_URL_SUB="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
     # Replace registry address
     REGISTRY="0x3B1554f346DFe5c482Bb4BA31b880c1C18412170"
     SLEEP=3
     START_SUB_ID=160000
-    BATCH_SIZE=50  # Recommended to use public RPC
+    BATCH_SIZE=800  # Recommended to use public RPC
     TRAIL_HEAD_BLOCKS=3
     INFERNET_VERSION="1.4.0"  # infernet image tag
 
@@ -232,8 +232,8 @@ function install_ritual_node() {
     sed -i "s|\"starting_sub_id\": [0-9]*|\"starting_sub_id\": $START_SUB_ID|" deploy/config.json
     sed -i "s|\"batch_size\": [0-9]*|\"batch_size\": $BATCH_SIZE|" deploy/config.json
     sed -i "s|\"trail_head_blocks\": [0-9]*|\"trail_head_blocks\": $TRAIL_HEAD_BLOCKS|" deploy/config.json
-    sed -i 's|"rpc_url": ".*"|"rpc_url": "https://mainnet.base.org"|' deploy/config.json
-    sed -i 's|"rpc_url": ".*"|"rpc_url": "https://mainnet.base.org"|' projects/hello-world/container/config.json
+    sed -i 's|"rpc_url": ".*"|"rpc_url": "https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"|' deploy/config.json
+    sed -i 's|"rpc_url": ".*"|"rpc_url": "https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"|' projects/hello-world/container/config.json
 
     # Modify projects/hello-world/container/config.json
     sed -i "s|\"registry_address\": \".*\"|\"registry_address\": \"$REGISTRY\"|" projects/hello-world/container/config.json
@@ -321,7 +321,7 @@ function install_ritual_node() {
 function view_logs() {
     display_header
     echo -e "${YELLOW}Viewing Ritual Node logs...${NC}"
-    docker logs -f infernet-node
+    docker compose -f infernet-container-starter/deploy/docker-compose.yaml up
 }
 
 # Remove Ritual Node function
