@@ -214,8 +214,8 @@ function install_ritual_node() {
     read -p "$(echo -e "${BLUE}Enter your Private Key (0x...): ${NC}")" PRIVATE_KEY
 
     # Default settings
-    RPC_URL="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
-    RPC_URL_SUB="https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"
+    RPC_URL="https://base-rpc.publicnode.com"
+    RPC_URL_SUB="https://base-rpc.publicnode.com"
     # Replace registry address
     REGISTRY="0x3B1554f346DFe5c482Bb4BA31b880c1C18412170"
     SLEEP=3
@@ -232,8 +232,8 @@ function install_ritual_node() {
     sed -i "s|\"starting_sub_id\": [0-9]*|\"starting_sub_id\": $START_SUB_ID|" deploy/config.json
     sed -i "s|\"batch_size\": [0-9]*|\"batch_size\": $BATCH_SIZE|" deploy/config.json
     sed -i "s|\"trail_head_blocks\": [0-9]*|\"trail_head_blocks\": $TRAIL_HEAD_BLOCKS|" deploy/config.json
-    sed -i 's|"rpc_url": ".*"|"rpc_url": "https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"|' deploy/config.json
-    sed -i 's|"rpc_url": ".*"|"rpc_url": "https://base-mainnet.g.alchemy.com/v2/m-v0QtiEB_SIHj_akiKMi-mTIbZfpMFN"|' projects/hello-world/container/config.json
+    sed -i 's|"rpc_url": ".*"|"rpc_url": ""https://base-rpc.publicnode.com""|' deploy/config.json
+    sed -i 's|"rpc_url": ".*"|"rpc_url": ""https://base-rpc.publicnode.com""|' projects/hello-world/container/config.json
 
     # Modify projects/hello-world/container/config.json
     sed -i "s|\"registry_address\": \".*\"|\"registry_address\": \"$REGISTRY\"|" projects/hello-world/container/config.json
