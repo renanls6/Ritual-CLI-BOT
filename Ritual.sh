@@ -180,5 +180,22 @@ install_ritual_node() {
     fi
 }
 
-# Chamando menu principal
+# Logs
+view_logs() {
+    display_header
+    echo -e "${CYAN}Logs do container:${NC}"
+    docker compose -f ~/infernet-container-starter/deploy/docker-compose.yaml logs -f
+}
+
+# Remoção
+remove_ritual_node() {
+    display_header
+    echo -e "${RED}Removendo Ritual Node...${NC}"
+    docker compose -f ~/infernet-container-starter/deploy/docker-compose.yaml down
+    rm -rf ~/infernet-container-starter ~/foundry ~/.foundry
+    pip3 uninstall -y infernet-cli infernet-client
+    echo -e "${GREEN}Ritual Node removido com sucesso.${NC}"
+}
+
+# Inicia o menu
 main_menu
