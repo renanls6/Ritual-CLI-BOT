@@ -43,36 +43,29 @@ install_ritual_node() {
     pip3 install --upgrade pip
     pip3 install infernet-cli infernet-client
 
-    # Instalar Foundry (Forge)
+    # Install Foundry (Forge)
     echo -e "${YELLOW}Installing Foundry (forge)...${NC}"
     curl -L https://foundry.paradigm.xyz | bash
 
-    # Setar PATH para Foundry
+    # Set PATH for Foundry
     export PATH="$HOME/.foundry/bin:$PATH"
     if ! grep -q 'export PATH="$HOME/.foundry/bin:$PATH"' ~/.bashrc; then
         echo 'export PATH="$HOME/.foundry/bin:$PATH"' >> ~/.bashrc
     fi
 
-    # Remover forge antigo se existir em /usr/bin/forge (para evitar conflito)
+    # Remove old forge binary if exists
     if [ -f "/usr/bin/forge" ]; then
         echo -e "${YELLOW}Removing old forge binary at /usr/bin/forge...${NC}"
         rm -f /usr/bin/forge
     fi
 
-    # Source para pegar o PATH atualizado no shell atual
+    # Source updated bashrc for current shell
     source ~/.bashrc
 
-    # Criar diretório do projeto
+    # Clone infernet-container-starter repo (public URL)
     if [ ! -d "$HOME/infernet-container-starter" ]; then
-        echo -e "${YELLOW}Cloning infernet-container-starter repo via SSH...${NC}"
-        if git clone git@github.com:infernet-hq/infernet-container-starter.git "$HOME/infernet-container-starter"; then
-            echo -e "${GREEN}Repo cloned successfully via SSH.${NC}"
-        else
-            echo -e "${RED}Failed to clone repo via SSH.${NC}"
-            echo -e "${YELLOW}Please make sure you have your SSH key added to GitHub and ssh-agent running.${NC}"
-            echo -e "${YELLOW}Alternatively, clone the repo manually or configure HTTPS access with a token.${NC}"
-            exit 1
-        fi
+        echo -e "${YELLOW}Cloning infernet-container-starter repo...${NC}"
+        git clone https://github.com/ritual-net/infernet-container-starter.git "$HOME/infernet-container-starter"
     else
         echo -e "${YELLOW}infernet-container-starter directory already exists. Pulling latest changes...${NC}"
         cd "$HOME/infernet-container-starter"
@@ -81,7 +74,7 @@ install_ritual_node() {
 
     cd "$HOME/infernet-container-starter"
 
-    # Criar o arquivo config.json com chaves e configuração necessárias
+    # Create config.json with keys and configuration
     echo -e "${YELLOW}Creating config.json...${NC}"
     read -p "Enter your Infernet API key: " API_KEY
     read -p "Enter your Ritual wallet address (0x...): " WALLET_ADDRESS
@@ -100,19 +93,18 @@ install_ritual_node() {
 }
 EOF
 
-    # Build do container
+    # Build and deploy docker container
     echo -e "${YELLOW}Building and deploying docker container with docker-compose...${NC}"
 
     docker compose build
 
-    # Rodar container em screen para rodar em background e você poder desconectar
+    # Run container inside screen session
     screen -dmS ritual_node docker compose up
 
-    # Deploy dos contratos com Foundry
+    # Deploy contracts with forge
     echo -e "${YELLOW}Deploying contracts with forge...${NC}"
 
-    # Certificar que está no diretório correto para deploy dos contratos
-    # Exemplo: ~/infernet-container-starter/contracts
+    # Go to contracts directory for deploy
     cd contracts || {
         echo -e "${RED}Contracts directory not found! Skipping contracts deploy.${NC}"
         return
@@ -120,10 +112,10 @@ EOF
 
     forge build
 
-    # Corrigindo PATH pra forge
+    # Ensure PATH for forge
     export PATH="$HOME/.foundry/bin:$PATH"
 
-    # Atenção: substitua "SUA_CHAVE_PRIVADA_AQUI" pela chave real no deploy
+    # Note: Replace SUA_CHAVE_PRIVADA_AQUI with your actual private key before running deploy
     forge create --rpc-url "$RPC_ENDPOINT" --private-key "SUA_CHAVE_PRIVADA_AQUI" src/MyContract.sol:MyContract
 
     echo -e "${GREEN}Installation and deployment completed successfully!${NC}"
@@ -137,7 +129,7 @@ view_logs() {
     display_header
     echo -e "${YELLOW}Showing logs from Ritual Node...${NC}"
 
-    # Ajuste o caminho se seu docker-compose.yaml estiver em outro local
+    # Adjust path if your docker-compose.yaml is in a different location
     docker compose -f ~/infernet-container-starter/deploy/docker-compose.yaml logs -f
 }
 
