@@ -1,4 +1,4 @@
-]#!/bin/bash
+#!/bin/bash
 
 # Colors
 RED='\033[0;31m'
@@ -65,6 +65,7 @@ install_ritual_node() {
     # Criar diretório do projeto
     if [ ! -d "$HOME/infernet-container-starter" ]; then
         echo -e "${YELLOW}Cloning infernet-container-starter repo...${NC}"
+        # ALTERAÇÃO AQUI: clone sem autenticação (URL sem usuário)
         git clone https://github.com/infernet-hq/infernet-container-starter.git "$HOME/infernet-container-starter"
     else
         echo -e "${YELLOW}infernet-container-starter directory already exists. Pulling latest changes...${NC}"
