@@ -64,9 +64,15 @@ install_ritual_node() {
 
     # Criar diretório do projeto
     if [ ! -d "$HOME/infernet-container-starter" ]; then
-        echo -e "${YELLOW}Cloning infernet-container-starter repo...${NC}"
-        # ALTERAÇÃO AQUI: clone sem autenticação (URL sem usuário)
-        git clone https://github.com/infernet-hq/infernet-container-starter.git "$HOME/infernet-container-starter"
+        echo -e "${YELLOW}Cloning infernet-container-starter repo via SSH...${NC}"
+        if git clone git@github.com:infernet-hq/infernet-container-starter.git "$HOME/infernet-container-starter"; then
+            echo -e "${GREEN}Repo cloned successfully via SSH.${NC}"
+        else
+            echo -e "${RED}Failed to clone repo via SSH.${NC}"
+            echo -e "${YELLOW}Please make sure you have your SSH key added to GitHub and ssh-agent running.${NC}"
+            echo -e "${YELLOW}Alternatively, clone the repo manually or configure HTTPS access with a token.${NC}"
+            exit 1
+        fi
     else
         echo -e "${YELLOW}infernet-container-starter directory already exists. Pulling latest changes...${NC}"
         cd "$HOME/infernet-container-starter"
@@ -117,6 +123,7 @@ EOF
     # Corrigindo PATH pra forge
     export PATH="$HOME/.foundry/bin:$PATH"
 
+    # Atenção: substitua "SUA_CHAVE_PRIVADA_AQUI" pela chave real no deploy
     forge create --rpc-url "$RPC_ENDPOINT" --private-key "SUA_CHAVE_PRIVADA_AQUI" src/MyContract.sol:MyContract
 
     echo -e "${GREEN}Installation and deployment completed successfully!${NC}"
